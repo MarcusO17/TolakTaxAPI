@@ -7,11 +7,12 @@ import uvicorn
 import base64
 import json
 import mimetypes
-import Reciept
+from classes.Reciept import Receipt
 
+# Load environment variables from .env file
 load_dotenv()
 
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+client =  Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 
 app = FastAPI()
@@ -82,7 +83,7 @@ async def detect_image(file: UploadFile = File(...)):
                                     *   `payment_method`: (String, optional) The method of payment (e.g., "Cash", "Credit Card", "Visa ****1234"), if visible.
 
                             3.  **Data Enrichment (If Receipt):**
-                                *   `expense_category`: (String) Based on the `merchant_name` and `line_items`, infer an appropriate expense category. Choose from a predefined list or use common sense. Examples:
+                                *   `expense_category`: (String) Based on the `merchant_name` and `line_items`, infer an appropriate expense category. Choose from a predefined list. Examples:
                                     *   "Food & Dining"
                                     *   "Groceries"
                                     *   "Transportation"
@@ -168,14 +169,13 @@ async def detect_image(file: UploadFile = File(...)):
             stop=None,
         )
 
-        print(chat_completion.choices[0].message.content)
-
-        return {"message": json.loads(chat_completion.choices[0].message.content)}
+        return {"message": chat_completion.choices[0].message.content, "receipt": json.loads(chat_completion.choices[0].message.content)}
 
     except Exception as e:
         return {"error": f"Could not read image: {str(e)}"}
     finally:
         await file.close()
+
 
 
 if __name__ == "__main__":
