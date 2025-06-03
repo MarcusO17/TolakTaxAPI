@@ -9,6 +9,8 @@ import json
 import mimetypes
 from typing import Annotated
 from .classes.Reciept import Receipt 
+import db_helper as db
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,6 +24,9 @@ client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 
 app = FastAPI()
+
+
+
 
 
 @app.get("/")
