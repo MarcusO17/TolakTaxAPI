@@ -34,8 +34,8 @@ async def root():
     return {"message": "Hello World"}
 
 
-@app.post("/upload-image/")
-async def upload_image(file: Annotated[UploadFile, File()]):
+@app.post("/upload-reciept-image/")
+async def upload_reciept_image(file: Annotated[UploadFile, File()]):
     file.filename = f"{uuid.uuid4()}.jpg"
     contents = await file.read()
 
@@ -45,8 +45,8 @@ async def upload_image(file: Annotated[UploadFile, File()]):
     return {"filename": file.filename}
 
 
-@app.post("/read-uploaded-image/")
-async def detect_image(file: Annotated[UploadFile, File()]):
+@app.post("/read-reciept-image/")
+async def read_reciept_image(file: Annotated[UploadFile, File()]):
     try:
         image = await file.read()
         base64_image = base64.b64encode(image).decode("utf-8")
@@ -79,12 +79,54 @@ async def detect_image(file: Annotated[UploadFile, File()]):
             stop=None,
         )
 
-        return {"message": chat_completion.choices[0].message.content, "receipt": json.loads(chat_completion.choices[0].message.content)}
+        return Receipt(**json.loads(chat_completion.choices[0].message.content))
 
     except Exception as e:
         return {"error": f"Could not read image: {str(e)}"}
     finally:
         await file.close()
+
+@app.get("/user/get-username/")
+async def get_username(id_token: str):
+    user_id = db.get_uid_from_id_token(id_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid ID token")
+
+    try:
+        print(f"User ID: {user_id}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving username: {str(e)}")
+
+
+@app.post("/add-receipt/")
+async def add_receipt(receipt: Receipt, id_token: str):
+    user_id = db.get_uid_from_id_token(id_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid ID token")
+
+    receipt_data = Receipt.model_dump()
+    receipt_data["user_id"] = user_id
+
+    try:
+        doc_ref = db.add_receipt(receipt_data, user_id,image_url)
+        return {"message": "Receipt added successfully", "receipt_id": doc_ref.id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error adding receipt: {str(e)}")
+
+@app.get("/get-receipts-by-user/")
+async def get_receipts_by_user(id_token: str):
+    user_id = db.get_uid_from_id_token(id_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid ID token")
+
+    try:
+        print(f"User ID: {user_id}")
+         # Retrieve receipts for the user
+        receipts = db.get_user_receipts(user_id)
+        return {"receipts": receipts}   
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving receipts: {str(e)}")
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
