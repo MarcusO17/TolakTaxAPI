@@ -42,7 +42,9 @@ async def upload_reciept_image(file: Annotated[UploadFile, File()]):
     with open(file.filename, "wb") as f:
         f.write(contents)
 
-    return {"filename": file.filename}
+    return db.upload_image_to_minio(
+        file.filename,file.filename
+    )
 
 
 @app.post("/read-reciept-image/")

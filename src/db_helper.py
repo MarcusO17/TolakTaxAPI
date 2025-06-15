@@ -2,6 +2,11 @@ import firebase_admin
 from firebase_admin import credentials, firestore, auth
 from dotenv import load_dotenv
 import os
+from minio import Minio
+from minio.error import S3Error
+
+import os
+
 
 load_dotenv()
 
@@ -21,8 +26,44 @@ else:
     raise ValueError("FIREBASE_SERVICE_ACCOUNT_KEY_PATH not found in environment variables")
 
 
+# Initialize Minio client
+minio_client = Minio(
+    "minio:9000", 
+    access_key=os.environ.get("MINIO_ROOT_USER"),
+    secret_key=os.environ.get("MINIO_ROOT_PASSWORD"),
+    secure=False
+)
+
+
+
 db = firestore.client()
 
+def upload_image_to_minio(file_path: str, object_name: str):
+    """
+    Upload an image to Minio.
+    
+    Args:
+        file_path (str): Path to the image file
+        bucket_name (str): Name of the Minio bucket
+        object_name (str): Name of the object in the bucket
+    
+    Returns:
+        str: URL of the uploaded image
+    """
+    bucket_name = "tolaktax"
+    try:
+        # Ensure the bucket exists
+        if not minio_client.bucket_exists(bucket_name):
+            minio_client.make_bucket(bucket_name)
+
+        # Upload the file
+        minio_client.fput_object(bucket_name, object_name, file_path,content_type="image/jpeg")
+
+        # Return the URL of the uploaded image
+        return f"http://minio:9000/{bucket_name}/{object_name}"
+    except S3Error as e:
+        print(f"Error uploading image to Minio: {e}")
+        return None
 
 def get_uid_from_id_token(id_token):
     try:
