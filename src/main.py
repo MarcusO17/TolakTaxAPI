@@ -8,7 +8,7 @@ import base64
 import json
 import mimetypes
 from typing import Annotated
-from classes.Reciept import Receipt
+from .classes.Reciept import Receipt 
 
 # Load environment variables from .env file
 load_dotenv()
@@ -18,7 +18,7 @@ prompt_path = os.path.join(os.path.dirname(__file__), "receipt_prompt.txt")
 with open(prompt_path, "r") as f:
     RECEIPT_PROMPT = f.read()
 
-client =  Groq(api_key=os.environ.get("GROQ_API_KEY"))
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 
 app = FastAPI()
@@ -54,7 +54,7 @@ async def detect_image(file: Annotated[UploadFile, File()]):
                 {
                     "role": "user",
                     "content": [
-                        {                           
+                        {
                             "type": "text",
                             "text": RECEIPT_PROMPT,
                         },
@@ -80,8 +80,6 @@ async def detect_image(file: Annotated[UploadFile, File()]):
         return {"error": f"Could not read image: {str(e)}"}
     finally:
         await file.close()
-
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
