@@ -38,14 +38,14 @@ minio_client = Minio(
 
 db = firestore.client()
 
-def upload_image_to_minio(file_path: str, object_name: str):
+def upload_image_to_minio(file_path: str, object_name: str, content_type: str = "application/octet-stream"):
     """
     Upload an image to Minio.
     
     Args:
         file_path (str): Path to the image file
-        bucket_name (str): Name of the Minio bucket
         object_name (str): Name of the object in the bucket
+        content_type (str): MIME type of the file
     
     Returns:
         str: URL of the uploaded image
@@ -57,7 +57,7 @@ def upload_image_to_minio(file_path: str, object_name: str):
             minio_client.make_bucket(bucket_name)
 
         # Upload the file
-        minio_client.fput_object(bucket_name, object_name, file_path,content_type="image/jpeg")
+        minio_client.fput_object(bucket_name, object_name, file_path, content_type=content_type)
 
         # Return the URL of the uploaded image
         return f"http://minio:9000/{bucket_name}/{object_name}"

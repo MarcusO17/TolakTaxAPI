@@ -36,15 +36,26 @@ async def root():
 
 @app.post("/upload-reciept-image/")
 async def upload_reciept_image(file: Annotated[UploadFile, File()]):
-    file.filename = f"{uuid.uuid4()}.jpg"
-    contents = await file.read()
-
-    with open(file.filename, "wb") as f:
-        f.write(contents)
-
-    return db.upload_image_to_minio(
-        file.filename,file.filename
-    )
+    try:
+        # Create a temporary file to save the uploaded content
+        temp_file_path = f"temp_{file.filename}"
+        with open(temp_file_path, "wb") as temp_file:
+            content = await file.read()
+            temp_file.write(content)
+        
+        # Upload the temporary file to Minio
+        image_url = db.upload_image_to_minio(
+            temp_file_path, file.filename, file.content_type
+        )
+        
+        return {"image_url": image_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error uploading image: {str(e)}")
+    finally:
+        # Ensure the temporary file is removed
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        await file.close()
 
 
 @app.post("/read-reciept-image/")
@@ -101,18 +112,20 @@ async def get_username(id_token: str):
 
 
 @app.post("/add-receipt/")
-async def add_receipt(receipt: Receipt, id_token: str):
+async def add_receipt(id_token: str,file: Annotated[UploadFile, File()]):
+    image_url = await upload_reciept_image(file)
+
     user_id = db.get_uid_from_id_token(id_token)
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid ID token")
 
-    receipt_data = Receipt.model_dump()
-    receipt_data["user_id"] = user_id
-
+    receipt_data_dict = {}
+    
     try:
-        doc_ref = db.add_receipt(receipt_data, user_id,image_url)
+        doc_ref = db.add_receipt(receipt_data_dict, user_id, image_url)
         return {"message": "Receipt added successfully", "receipt_id": doc_ref.id}
     except Exception as e:
+        print(f"Original error in add_receipt: {type(e).__name__} - {e}") # Print the original error
         raise HTTPException(status_code=500, detail=f"Error adding receipt: {str(e)}")
 
 @app.get("/get-receipts-by-user/")
