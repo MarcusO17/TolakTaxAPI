@@ -9,7 +9,7 @@ import json
 import mimetypes
 from typing import Annotated
 from .classes.Reciept import Receipt 
-import db_helper as db
+from . import db_helper as db
 
 
 # Load environment variables from .env file
