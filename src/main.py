@@ -10,6 +10,7 @@ import mimetypes
 from typing import Annotated
 from .classes.Reciept import Receipt 
 from . import db_helper as db
+import instructor
 
 
 # Load environment variables from .env file
@@ -21,7 +22,7 @@ with open(prompt_path, "r") as f:
     RECEIPT_PROMPT = f.read()
 
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-
+client = instructor.from_groq(client,mode=instructor.Mode.JSON)
 
 app = FastAPI()
 
@@ -49,6 +50,7 @@ async def upload_reciept_image(file: Annotated[UploadFile, File()]):
         )
         
         return {"image_url": image_url}
+    
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error uploading image: {str(e)}")
     finally:
@@ -65,35 +67,35 @@ async def read_reciept_image(file: Annotated[UploadFile, File()]):
         base64_image = base64.b64encode(image).decode("utf-8")
         mime_type = file.content_type
 
-        chat_completion = client.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
-            response_format={"type": "json_object"},
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": RECEIPT_PROMPT,
+        receipt = client.chat.completions.create(
+        model="meta-llama/llama-4-scout-17b-16e-instruct",
+        response_model =Receipt,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": RECEIPT_PROMPT,
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{mime_type};base64,{base64_image}",
                         },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:{mime_type};base64,{base64_image}",
-                            },
-                        },
-                    ],
-                }
-            ],
-            temperature=0.5,
-            max_completion_tokens=1024,
-            top_p=1,
-            stream=False,
-            stop=None,
-        )
+                    },
+                ],
+            }
+        ],
+        temperature=0.5,
+        max_completion_tokens=1024,
+        top_p=1,
+        stream=False,
+        stop=None,
+    )
 
-        return Receipt(**json.loads(chat_completion.choices[0].message.content))
-
+        return receipt
+    
     except Exception as e:
         return {"error": f"Could not read image: {str(e)}"}
     finally:

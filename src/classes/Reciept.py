@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field, constr
 from datetime import date, time
 
 class LineItem(BaseModel):
-    item: str
+    description: str 
     quantity: float = Field(default=float("1.0"), gt=float("0"))
     original_unit_price: float = Field(ge=float("0"))
     line_item_discount_amount: Optional[float] = Field(default=None, ge=float("0"))
@@ -15,7 +15,6 @@ class OverallDiscount(BaseModel):
     amount: float
 
 class Receipt(BaseModel):
-    reciept_id: Optional[str] = None
     merchant_name: str
     merchant_address: Optional[str] = None
     transaction_date: date # Pydantic will parse "YYYY-MM-DD" strings
