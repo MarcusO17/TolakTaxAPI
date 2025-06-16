@@ -1,33 +1,36 @@
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
 from dotenv import load_dotenv
+import json
+import base64
 import os
 from google.cloud import storage
 
-import os
 
 
 load_dotenv()
+def get_firebase_credentials():
+    firebase_encoded_key = os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY")
+    firebase_encoded_key = str(firebase_encoded_key)[2:-1]
+    return json.loads(base64.b64decode(firebase_encoded_key).decode('utf-8'))
+
+def get_google_credentials():
+    google_encoded_key = os.getenv("google_SERVICE_ACCOUNT_KEY")
+    google_encoded_key = str(google_encoded_key)[2:-1]
+    return json.loads(base64.b64decode(google_encoded_key).decode('utf-8'))
 
 
-# Initialize Firebase Admin SDK
-service_account_path = os.environ.get("FIREBASE_SERVICE_ACCOUNT_KEY_PATH")
-if service_account_path:
-    # Convert relative path to absolute path if needed
-    if not os.path.isabs(service_account_path):
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        service_account_path = os.path.join(base_dir, service_account_path.lstrip("./"))
-    
-    # Initialize Firebase with the service account key file
-    cred = credentials.Certificate(service_account_path)
-    firebase_admin.initialize_app(cred)
-else:
-    raise ValueError("FIREBASE_SERVICE_ACCOUNT_KEY_PATH not found in environment variables")
+firebase_sak = get_firebase_credentials()
+google_sak = get_google_credentials()
 
+
+        
+# Initialize Firebase with the service account key file
+cred = credentials.Certificate(firebase_sak)
+firebase_admin.initialize_app(cred)
 
 #Google Cloud Storage client
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.environ.get("GOOGLE_SERVICE_ACCOUNT_KEY_PATH")    
-google_bucket = storage.Client()
+google_bucket = storage.Client.from_service_account_info(google_sak)
 
 db = firestore.client()
 
@@ -80,7 +83,7 @@ def add_receipt(receipt_data: dict, user_id: str,image_url: str):
     """
     # Add the user_id to the receipt data
     receipt_data["user_id"] = user_id
-    #receipt_data["image_url"] = image_url
+    receipt_data["image_url"] = image_url
     
     # Add the receipt to Firestore
     doc_ref = db.collection("receipts").add(receipt_data)

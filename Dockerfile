@@ -6,9 +6,8 @@ COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY ./src /app/src
-COPY fbserviceAccountKey.json /app/fbserviceAccountKey.json
-COPY .env /app/.env
 
-EXPOSE 8000
+
+EXPOSE 8080
 
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8080"]

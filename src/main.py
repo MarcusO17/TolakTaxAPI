@@ -107,7 +107,7 @@ async def read_reciept_image(file: Annotated[UploadFile, File()]):
 
 @app.post("/add-receipt/")
 async def add_receipt(id_token: str,file: Annotated[UploadFile, File()]):
-    #image_url = await upload_reciept_image(file)
+    image_url = await upload_reciept_image(file)
 
     user_id = db.get_uid_from_id_token(id_token)
     if not user_id:
@@ -118,7 +118,7 @@ async def add_receipt(id_token: str,file: Annotated[UploadFile, File()]):
         raise HTTPException(status_code=400, detail=reciept_data["error"])
     
     try:
-        doc_ref = db.add_receipt(receipt_data, user_id)
+        doc_ref = db.add_receipt(receipt_data, user_id,image_url)
         return {"message": "Receipt added successfully", "receipt_id": doc_ref.id}
     
     except Exception as e:

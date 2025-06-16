@@ -5,4 +5,5 @@ uvicorn
 firebase-admin
 pydantic
 python-multipart
-minio
+instructor
+google-auth
