@@ -10,8 +10,7 @@
     *   If the image IS identified as a receipt, extract the following fields:
         *   `merchant_name`: (String) The name of the business or seller.
         *   `merchant_address`: (String, optional) The physical address of the merchant, if available.
-        *   `transaction_date`: (String) The date of the transaction. Standardize to "YYYY-MM-DD" format if possible.
-        *   `transaction_time`: (String, optional) The time of the transaction. Standardize to "HH:MM:SS" format if possible.
+        *   `transaction_datetime`: (String) The date of the transaction. Standardize to ISO 8601
         *   `line_items`: (Array of Objects) Each object should represent a purchased item or service and contain:
             *   `description`: (String) Name or description of the item/service.
             *   `quantity`: (Number) The quantity of the item (default to 1 if not specified).
@@ -55,8 +54,7 @@
 {
 "merchant_name": "Tech Gadgets Store",
 "merchant_address": "456 Innovation Dr, Silicon City, TX 75001",
-"transaction_date": "2023-11-15",
-"transaction_time": "14:30:00",
+"transaction_datetime": "2024-05-15T18:08:30.825890",
 "line_items": [
     {
     "description": "Wireless Mouse",

@@ -1,6 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field, constr
-from datetime import date, time
+from pydantic import BaseModel, Field
 
 class LineItem(BaseModel):
     description: str 
@@ -17,8 +16,7 @@ class OverallDiscount(BaseModel):
 class Receipt(BaseModel):
     merchant_name: str
     merchant_address: Optional[str] = None
-    transaction_date: date # Pydantic will parse "YYYY-MM-DD" strings
-    transaction_time: Optional[time] = None # Pydantic will parse "HH:MM:SS" strings
+    transaction_datetime:  str # ISO 8601 format 
     line_items: List[LineItem] = Field(default_factory=list)
     
     subtotal: Optional[float] = Field(default=None, ge=float("0")) # Sum of line_items.total_price

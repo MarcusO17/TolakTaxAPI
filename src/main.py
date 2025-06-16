@@ -121,8 +121,8 @@ async def add_receipt(id_token: str,file: Annotated[UploadFile, File()]):
         raise HTTPException(status_code=400, detail=receipt_data["error"])
     
     try:
-        doc_ref = db.add_receipt(receipt_data.model_dump(), user_id,image_url)
-        return {"message": "Receipt added successfully", "receipt_id": doc_ref.id}
+        doc_ref = db.add_receipt(receipt_data.model_dump(), user_id, image_url)
+        return {"message": "Receipt added successfully", "receipt_id": doc_ref[1].id}
     
     except Exception as e:
         print(f"Original error in add_receipt: {type(e).__name__} - {e}") # Print the original error
