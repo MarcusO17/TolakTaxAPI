@@ -45,9 +45,12 @@ async def upload_reciept_image(file: Annotated[UploadFile, File()]):
             temp_file.write(content)
         
         # Upload the temporary file to Minio
-        image_url = db.upload_image_to_minio(
-            temp_file_path, file.filename, file.content_type
+        image_url = db.upload_to_bucket(
+            blob_name=f"receipts/{uuid.uuid4()}_{file.filename}",
+            path_to_file=temp_file_path,
+            bucket_name=os.environ.get("GOOGLE_BUCKET_NAME")
         )
+        
         
         return {"image_url": image_url}
     
@@ -101,31 +104,23 @@ async def read_reciept_image(file: Annotated[UploadFile, File()]):
     finally:
         await file.close()
 
-@app.get("/user/get-username/")
-async def get_username(id_token: str):
-    user_id = db.get_uid_from_id_token(id_token)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid ID token")
-
-    try:
-        print(f"User ID: {user_id}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error retrieving username: {str(e)}")
-
 
 @app.post("/add-receipt/")
 async def add_receipt(id_token: str,file: Annotated[UploadFile, File()]):
-    image_url = await upload_reciept_image(file)
+    #image_url = await upload_reciept_image(file)
 
     user_id = db.get_uid_from_id_token(id_token)
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid ID token")
-
-    receipt_data_dict = {}
+    
+    receipt_data = await read_reciept_image(file)
+    if "error" in receipt_data:
+        raise HTTPException(status_code=400, detail=reciept_data["error"])
     
     try:
-        doc_ref = db.add_receipt(receipt_data_dict, user_id, image_url)
+        doc_ref = db.add_receipt(receipt_data, user_id)
         return {"message": "Receipt added successfully", "receipt_id": doc_ref.id}
+    
     except Exception as e:
         print(f"Original error in add_receipt: {type(e).__name__} - {e}") # Print the original error
         raise HTTPException(status_code=500, detail=f"Error adding receipt: {str(e)}")
@@ -144,6 +139,17 @@ async def get_receipts_by_user(id_token: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving receipts: {str(e)}")
 
+@app.get("/user/get-username/")
+async def get_username(id_token: str):
+    user_id = db.get_uid_from_id_token(id_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid ID token")
+
+    try:
+        print(f"User ID: {user_id}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving username: {str(e)}")
+    
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -2,8 +2,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore, auth
 from dotenv import load_dotenv
 import os
-from minio import Minio
-from minio.error import S3Error
+from google.cloud import storage
 
 import os
 
@@ -26,7 +25,22 @@ else:
     raise ValueError("FIREBASE_SERVICE_ACCOUNT_KEY_PATH not found in environment variables")
 
 
+#Google Cloud Storage client
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.environ.get("GOOGLE_SERVICE_ACCOUNT_KEY_PATH")    
+google_bucket = storage.Client()
+
 db = firestore.client()
+
+def upload_to_bucket(blob_name, path_to_file, bucket_name):
+    """ Upload data to a bucket"""
+     
+    bucket = google_bucket.get_bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+    blob.upload_from_filename(path_to_file)
+    
+    #returns a public url
+    return blob.public_url
+
 
 def get_uid_from_id_token(id_token):
     try:
@@ -66,7 +80,7 @@ def add_receipt(receipt_data: dict, user_id: str,image_url: str):
     """
     # Add the user_id to the receipt data
     receipt_data["user_id"] = user_id
-    receipt_data["image_url"] = image_url
+    #receipt_data["image_url"] = image_url
     
     # Add the receipt to Firestore
     doc_ref = db.collection("receipts").add(receipt_data)
