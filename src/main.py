@@ -60,7 +60,6 @@ async def upload_reciept_image(file: Annotated[UploadFile, File()]):
         # Ensure the temporary file is removed
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
-        await file.close()
 
 
 @app.post("/read-reciept-image/")
@@ -101,24 +100,28 @@ async def read_reciept_image(file: Annotated[UploadFile, File()]):
     
     except Exception as e:
         return {"error": f"Could not read image: {str(e)}"}
-    finally:
-        await file.close()
 
 
 @app.post("/add-receipt/")
 async def add_receipt(id_token: str,file: Annotated[UploadFile, File()]):
+    await file.seek(0)  
     image_url = await upload_reciept_image(file)
+    print(f"Image URL: {image_url['image_url']}")
 
     user_id = db.get_uid_from_id_token(id_token)
+    print(f"User ID: {user_id}")
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid ID token")
     
+    await file.seek(0)
     receipt_data = await read_reciept_image(file)
+    print(f"Receipt Data: {receipt_data}")
+
     if "error" in receipt_data:
-        raise HTTPException(status_code=400, detail=reciept_data["error"])
+        raise HTTPException(status_code=400, detail=receipt_data["error"])
     
     try:
-        doc_ref = db.add_receipt(receipt_data, user_id,image_url)
+        doc_ref = db.add_receipt(receipt_data.model_dump(), user_id,image_url)
         return {"message": "Receipt added successfully", "receipt_id": doc_ref.id}
     
     except Exception as e:
