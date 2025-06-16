@@ -15,7 +15,7 @@ def get_firebase_credentials():
     return json.loads(base64.b64decode(firebase_encoded_key).decode('utf-8'))
 
 def get_google_credentials():
-    google_encoded_key = os.getenv("google_SERVICE_ACCOUNT_KEY")
+    google_encoded_key = os.getenv("GOOGLE_SERVICE_ACCOUNT_KEY")
     google_encoded_key = str(google_encoded_key)[2:-1]
     return json.loads(base64.b64decode(google_encoded_key).decode('utf-8'))
 
