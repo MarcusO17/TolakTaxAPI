@@ -1,0 +1,23 @@
+{
+	"name": "FastAPI Dev Container",
+	"dockerFile": "../Dockerfile.dev",
+	"forwardPorts": [
+		"8080:8080"
+	],
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python"
+			],
+			"settings": {
+				"python.pythonPath": "/usr/local/bin/python",
+				"python.linting.pylintEnabled": true,
+				"python.linting.enabled": true,
+				"python.formatting.provider": "autopep8"
+			}
+		}
+	},
+	"workspaceMount": "source=${localWorkspaceFolder},target=/app,type=bind,consistency=delegated",
+	"workspaceFolder": "/app",
+	"runArgs": []
+}
