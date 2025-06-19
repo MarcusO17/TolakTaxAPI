@@ -24,7 +24,6 @@ firebase_sak = get_firebase_credentials()
 google_sak = get_google_credentials()
 
 
-        
 # Initialize Firebase with the service account key file
 cred = credentials.Certificate(firebase_sak)
 firebase_admin.initialize_app(cred)
