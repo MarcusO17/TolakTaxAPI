@@ -62,8 +62,8 @@ async def upload_reciept_image(file: Annotated[UploadFile, File()]):
             os.remove(temp_file_path)
 
 
-@app.post("/read-reciept-image/")
-async def read_reciept_image(file: Annotated[UploadFile, File()]):
+@app.post("/read-receipt-image/")
+async def read_receipt_image(file: Annotated[UploadFile, File()]):
     try:
         image = await file.read()
         base64_image = base64.b64encode(image).decode("utf-8")
@@ -96,14 +96,15 @@ async def read_reciept_image(file: Annotated[UploadFile, File()]):
         stop=None,
     )
 
-        return receipt
+        return receipt.model_dump()
     
     except Exception as e:
         return {"error": f"Could not read image: {str(e)}"}
 
 
 @app.post("/add-receipt/")
-async def add_receipt(id_token: str,file: Annotated[UploadFile, File()]):
+async def add_receipt(id_token: str,file: Annotated[UploadFile, File()],receipt: str):
+    print(receipt)
     await file.seek(0)  
     image_url = await upload_reciept_image(file)
     print(f"Image URL: {image_url['image_url']}")
@@ -113,15 +114,14 @@ async def add_receipt(id_token: str,file: Annotated[UploadFile, File()]):
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid ID token")
     
-    await file.seek(0)
-    receipt_data = await read_reciept_image(file)
+    receipt_data = Receipt(**json.loads(receipt)).model_dump()
     print(f"Receipt Data: {receipt_data}")
 
     if "error" in receipt_data:
         raise HTTPException(status_code=400, detail=receipt_data["error"])
     
     try:
-        doc_ref = db.add_receipt(receipt_data.model_dump(), user_id, image_url)
+        doc_ref = db.add_receipt(receipt_data, user_id, image_url)
         return {"message": "Receipt added successfully", "receipt_id": doc_ref[1].id}
     
     except Exception as e:
