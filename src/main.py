@@ -21,8 +21,15 @@ prompt_path = os.path.join(os.path.dirname(__file__), "receipt_prompt.txt")
 with open(prompt_path, "r") as f:
     RECEIPT_PROMPT = f.read()
 
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-client = instructor.from_groq(client,mode=instructor.Mode.JSON)
+# Load the tax prompt from file
+prompt_path = os.path.join(os.path.dirname(__file__), "tax_prompt.txt")
+with open(prompt_path, "r") as f:
+    TAX_PROMPT = f.read()
+
+
+
+client_groq = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+client = instructor.from_groq(client_groq,mode=instructor.Mode.JSON)
 
 app = FastAPI()
 
@@ -153,6 +160,42 @@ async def get_username(id_token: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving username: {str(e)}")
     
+# Tax 
+
+@app.get("/classify-tax/")
+async def classify_tax(receipt_id: str):
+    try:
+        print(f"Receipt ID: {receipt_id}")
+        # Retrieve the receipt from the database
+        receipt = db.get_receipt_by_id(receipt_id)
+        if not receipt:
+            raise HTTPException(status_code=404, detail="Receipt not found")
+        
+        # Classify the tax
+        tax_classification = client_groq.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": TAX_PROMPT,
+                    },
+                ],
+            }
+        ],
+        temperature=0.5,
+        max_completion_tokens=1024,
+        top_p=1,
+        stream=False,
+        stop=None,
+        )
+        
+        return {"tax_classification": tax_classification[0].message.content}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error classifying tax: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8080)
