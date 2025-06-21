@@ -68,13 +68,12 @@ def get_receipt_collection():
     """
     return db.collection("receipts")
 
-
 def add_receipt(receipt_data: dict, user_id: str,image_url: str):
     """
     Add a new receipt to the Firestore collection and associate it with a user.
     
     Args:
-        receipt_data (dict): The receipt data to store
+        receipt_data (dict): The receipt data to storer
         user_id (str): The ID of the user who owns this receipt
     
     Returns:
@@ -83,6 +82,7 @@ def add_receipt(receipt_data: dict, user_id: str,image_url: str):
     # Add the user_id to the receipt data
     receipt_data["user_id"] = user_id
     receipt_data["image_url"] = image_url
+    receipt_data["added_at"] = firestore.SERVER_TIMESTAMP  
     
     # Add the receipt to Firestore
     doc_ref = db.collection("receipts").add(receipt_data)
