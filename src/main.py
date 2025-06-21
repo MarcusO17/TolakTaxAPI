@@ -167,20 +167,21 @@ async def classify_tax(receipt_id: str):
     try:
         print(f"Receipt ID: {receipt_id}")
         # Retrieve the receipt from the database
-        receipt = db.get_receipt_by_id(receipt_id)
+        receipt = str(db.get_receipt_by_id(receipt_id).to_dict())
         if not receipt:
             raise HTTPException(status_code=404, detail="Receipt not found")
         
         # Classify the tax
         tax_classification = client_groq.chat.completions.create(
         model="llama-3.3-70b-versatile",
+        response_format={"type": "json_object"},
         messages=[
             {
                 "role": "user",
                 "content": [
                     {
                         "type": "text",
-                        "text": TAX_PROMPT,
+                        "text": receipt+";"+TAX_PROMPT,
                     },
                 ],
             }
@@ -192,7 +193,7 @@ async def classify_tax(receipt_id: str):
         stop=None,
         )
         
-        return {"tax_classification": tax_classification[0].message.content}
+        return {"tax_classification": json.loads(tax_classification.choices[0].message.content)}
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error classifying tax: {str(e)}")
