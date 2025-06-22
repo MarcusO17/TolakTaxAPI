@@ -64,7 +64,14 @@ Here are the relevant tax relief categories, their codes (Bil.), descriptions, a
 
 **Instructions for Classification:**
 
-1.  **Parse the JSON Receipt:** The input receipt will be a JSON array of items. Assume each item object in the input array has at least `itemDescription` and `totalPriceForItem` fields. You might also find `itemName`, `quantity`, `pricePerUnit`.
+1.  **Parse the JSON Receipt:** The input receipt will be a JSON array of items. Assume each item object in the input array has: 
+            *   `line_items`: (Array of Objects) Each object should represent a purchased item or service and contain:
+            *   `description`: (String) Name or description of the item/service.
+            *   `quantity`: (Number) The quantity of the item (default to 1 if not specified).
+            *   `original_unit_price`: (Number) The price of a single unit of the item *before* any line-item specific discounts.
+            *   `line_item_discount_amount`: (Number, optional) The total discount amount applied specifically to this line item (represented as a positive number).
+            *   `line_item_discount_description`: (String, optional) Description of the line-item discount, if any (e.g., "20% off", "Sale").
+            *   `total_price`: (Number) The final price for this line item after its specific discount: `(original_unit_price * quantity) - line_item_discount_amount`. If no discount, `total_price` is `original_unit_price * quantity`.
 2.  **Iterate Through Items:** For each item in the input JSON receipt array:
     *   Analyze the item's description and nature of the expense.
     *   Match it to the **most specific and appropriate** LHDN tax relief category from the knowledge base.
