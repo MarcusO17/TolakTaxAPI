@@ -124,12 +124,15 @@ async def add_receipt(id_token: str,file: Annotated[UploadFile, File()],receipt:
     receipt_data = Receipt(**json.loads(receipt)).model_dump()
     print(f"Receipt Data: {receipt_data}")
 
+    tax_info = await classify_tax(receipt_data)
+
     if "error" in receipt_data:
         raise HTTPException(status_code=400, detail=receipt_data["error"])
     
     try:
-        doc_ref = db.add_receipt(receipt_data, user_id, image_url)
+        doc_ref = db.add_receipt(receipt_data, user_id, image_url,tax_info)
         return {"message": "Receipt added successfully", "receipt_id": doc_ref[1].id}
+    
     
     except Exception as e:
         print(f"Original error in add_receipt: {type(e).__name__} - {e}") # Print the original error
@@ -163,14 +166,8 @@ async def get_username(id_token: str):
 # Tax 
 
 @app.get("/classify-tax/")
-async def classify_tax(receipt_id: str):
+async def classify_tax(receipt_data:str):
     try:
-        print(f"Receipt ID: {receipt_id}")
-        # Retrieve the receipt from the database
-        receipt = str(db.get_receipt_by_id(receipt_id).to_dict())
-        if not receipt:
-            raise HTTPException(status_code=404, detail="Receipt not found")
-        
         # Classify the tax
         tax_classification = client_groq.chat.completions.create(
         model="llama-3.3-70b-versatile",
