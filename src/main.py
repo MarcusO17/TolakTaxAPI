@@ -168,6 +168,8 @@ async def get_username(id_token: str):
 @app.get("/classify-tax/")
 async def classify_tax(receipt_data:str):
     try:
+        receipt_data = json.loads(receipt_data)
+
         # Classify the tax
         tax_classification = client_groq.chat.completions.create(
         model="llama-3.3-70b-versatile",
@@ -178,7 +180,7 @@ async def classify_tax(receipt_data:str):
                 "content": [
                     {
                         "type": "text",
-                        "text": receipt+";"+TAX_PROMPT,
+                        "text": str(receipt_data) +";"+TAX_PROMPT,
                     },
                 ],
             }
@@ -189,8 +191,12 @@ async def classify_tax(receipt_data:str):
         stream=False,
         stop=None,
         )
+
+        tax_classification = json.loads(tax_classification.choices[0].message.content)
         
-        return {"tax_classification": json.loads(tax_classification.choices[0].message.content)}
+
+    
+        return {"tax_classification": tax_classification}
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error classifying tax: {str(e)}")
