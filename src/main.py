@@ -211,7 +211,6 @@ async def classify_tax(receipt_data:str):
         )
 
         tax_classification = json.loads(tax_classification.choices[0].message.content)
-        print(f"Tax Classification: {tax_classification}")
 
         receipt_data = db.parse_tax_into_line_items(receipt_data.model_dump(), tax_classification)
 
