@@ -29,15 +29,12 @@
         *   `payment_method`: (String, optional) The method of payment (e.g., "Cash", "Credit Card", "Visa ****1234"), if visible.
 
 3.  **Data Enrichment (If Receipt):**
-    *   `expense_category`: (String) Based on the `merchant_name` and `line_items`, infer an appropriate expense category. Choose from a predefined list. Examples:
+    *   `expense_category`: (String) Based on the `merchant_name` and `line_items`, infer an appropriate expense category. Choose from the predefined list. Examples:
         *   "Food & Dining"
-        *   "Groceries"
         *   "Transportation"
         *   "Utilities"
         *   "Shopping"
         *   "Entertainment"
-        *   "Office Supplies"
-        *   "Travel"
         *   "Healthcare"
         *   "Services"
         *   "Other"
