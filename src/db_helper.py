@@ -1,6 +1,7 @@
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
 from dotenv import load_dotenv
+from .classes.Reciept import LineTax
 import json
 import base64
 import os
@@ -121,4 +122,31 @@ def get_user(user_id: str):
         print(f"Error getting user: {e}")
         return None
 
+def parse_tax_into_line_items(receipt_data: dict,tax_classification: dict = None):
+    """
+    Parse tax information into line items.
+    
+    Args:
+        receipt_data (dict): The receipt data containing tax information
+        
+    Returns:
+        List of line items with tax information
+    """
+
+    try:
+        for i, item in enumerate(receipt_data["line_items"]):
+            if tax_classification and 'items' in tax_classification and i < len(tax_classification['items']):
+                item["line_tax"] = LineTax(**tax_classification['items'][i])
+            else:
+                item["line_tax"] = None 
+            
+        
+        return receipt_data 
+
+    except Exception as e:
+        print(f"Error parsing tax into line items: {e}")
+        receipt_data["error"] = "Failed to parse tax information"
+        return receipt_data
+            
+        
 

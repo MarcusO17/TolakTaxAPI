@@ -162,13 +162,31 @@ async def get_username(id_token: str):
         print(f"User ID: {user_id}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving username: {str(e)}")
-    
-# Tax 
 
+
+@app.get("/get-receipt-by-id/")
+async def get_receipt_by_id(receipt_id: str):
+    try:
+        print(f"Receipt ID: {receipt_id}")
+        # Retrieve the receipt by its ID
+        receipt = db.get_receipt_by_id(receipt_id)
+        print(f"Retrieved Receipt: {receipt}")
+        if not receipt:
+            raise HTTPException(status_code=404, detail="Receipt not found")
+        
+        return {"receipt": Receipt(**receipt.to_dict()).model_dump()}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving receipt: {str(e)}")
+
+
+
+
+# Tax 
 @app.get("/classify-tax/")
 async def classify_tax(receipt_data:str):
     try:
-        receipt_data = json.loads(receipt_data)
+        receipt_data = Receipt(**json.loads(receipt_data))
 
         # Classify the tax
         tax_classification = client_groq.chat.completions.create(
@@ -180,7 +198,7 @@ async def classify_tax(receipt_data:str):
                 "content": [
                     {
                         "type": "text",
-                        "text": str(receipt_data) +";"+TAX_PROMPT,
+                        "text": str(receipt_data.model_dump()) +";"+TAX_PROMPT,
                     },
                 ],
             }
@@ -193,10 +211,12 @@ async def classify_tax(receipt_data:str):
         )
 
         tax_classification = json.loads(tax_classification.choices[0].message.content)
-        
+        print(f"Tax Classification: {tax_classification}")
+
+        receipt_data = db.parse_tax_into_line_items(receipt_data.model_dump(), tax_classification)
 
     
-        return {"tax_classification": tax_classification}
+        return {"tax_classification": receipt_data}
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error classifying tax: {str(e)}")
