@@ -136,12 +136,31 @@ def parse_tax_into_line_items(receipt_data: dict,tax_classification: dict = None
     try:
         for i, item in enumerate(receipt_data["line_items"]):
             if tax_classification and 'items' in tax_classification and i < len(tax_classification['items']):
-                item["line_tax"] = LineTax(**tax_classification['items'][i])
+                item["line_tax"] = LineTax(**tax_classification['items'][i]).model_dump()
             else:
                 item["line_tax"] = None 
             
         
-        return receipt_data 
+    
+        tax_summary = {
+            "total_tax_saved": 0.0,
+            "exempt_items_count": 0,
+            "taxable_items_count": 0
+        }
+        
+
+        for item in receipt_data["line_items"]["line_tax"]:
+            print(item)
+            if item['tax_eligible'] == True:
+                tax_summary["taxable_items_count"] += 1
+                tax_summary["total_tax_saved"] += item['tax_amount']
+            else:
+                tax_summary["exempt_items_count"] += 1
+               
+        # Add tax summary to receipt data
+        receipt_data["tax_info"] = tax_summary
+
+        return receipt_data
 
     except Exception as e:
         print(f"Error parsing tax into line items: {e}")

@@ -190,7 +190,7 @@ async def classify_tax(receipt_data:str):
 
         # Classify the tax
         tax_classification = client_groq.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="qwen/qwen3-32b",
         response_format={"type": "json_object"},
         messages=[
             {
@@ -214,7 +214,6 @@ async def classify_tax(receipt_data:str):
 
         receipt_data = db.parse_tax_into_line_items(receipt_data.model_dump(), tax_classification)
 
-    
         return {"tax_classification": receipt_data}
     
     except Exception as e:
