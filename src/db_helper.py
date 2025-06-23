@@ -84,7 +84,6 @@ def add_receipt(receipt_data: dict, user_id: str,image_url: str,tax_info: dict):
     # Add the user_id to the receipt data
     receipt_data["user_id"] = user_id
     receipt_data["image_url"] = image_url
-    receipt_data["tax_info"] = tax_info
     # Add the receipt to Firestore
     doc_ref = db.collection("receipts").add(receipt_data)
     
@@ -122,7 +121,7 @@ def get_user(user_id: str):
         print(f"Error getting user: {e}")
         return None
 
-def parse_tax_into_line_items(receipt_data: dict,tax_classification: dict = None):
+def enrich_receipt_tax_info(receipt_data: dict,tax_classification: dict = None):
     """
     Parse tax information into line items.
     

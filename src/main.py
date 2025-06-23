@@ -124,13 +124,14 @@ async def add_receipt(id_token: str,file: Annotated[UploadFile, File()],receipt:
     receipt_data = Receipt(**json.loads(receipt)).model_dump()
     print(f"Receipt Data: {receipt_data}")
 
-    tax_info = await classify_tax(receipt_data)
+    #enrich with tax info
+    receipt_data_enriched = await classify_tax(receipt_data)
 
     if "error" in receipt_data:
         raise HTTPException(status_code=400, detail=receipt_data["error"])
     
     try:
-        doc_ref = db.add_receipt(receipt_data, user_id, image_url,tax_info)
+        doc_ref = db.add_receipt(receipt_data_enriched, user_id, image_url)
         return {"message": "Receipt added successfully", "receipt_id": doc_ref[1].id}
     
     
@@ -219,7 +220,7 @@ async def classify_tax(receipt_data:str):
         except Exception as e:
             tax_classification = {"tax_classification": "unknown", "items": []}
 
-        receipt_data = db.parse_tax_into_line_items(receipt_data.model_dump(), tax_classification)
+        receipt_data = db.enrich_receipt_tax_info(receipt_data.model_dump(), tax_classification)
 
         return {"tax_classification": receipt_data}
     
