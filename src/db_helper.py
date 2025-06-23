@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from .classes.Reciept import LineTax
 import json
 import base64
+import re
 import os
 from google.cloud import storage
 
@@ -70,7 +71,7 @@ def get_receipt_collection():
     return db.collection("receipts")
 
 
-def add_receipt(receipt_data: dict, user_id: str,image_url: str,tax_info: dict):
+def add_receipt(receipt_data: dict, user_id: str,image_url: str):
     """
     Add a new receipt to the Firestore collection and associate it with a user.
     

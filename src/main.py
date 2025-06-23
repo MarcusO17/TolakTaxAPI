@@ -131,7 +131,7 @@ async def add_receipt(id_token: str,file: Annotated[UploadFile, File()],receipt:
         raise HTTPException(status_code=400, detail=receipt_data["error"])
     
     try:
-        doc_ref = db.add_receipt(receipt_data_enriched, user_id, image_url)
+        doc_ref = db.add_receipt(receipt_data_enriched['tax_classification'], user_id, image_url)
         return {"message": "Receipt added successfully", "receipt_id": doc_ref[1].id}
     
     
@@ -185,40 +185,35 @@ async def get_receipt_by_id(receipt_id: str):
 
 # Tax 
 @app.get("/classify-tax/")
-async def classify_tax(receipt_data:str):
+async def classify_tax(receipt_data:dict):
     try:
-        receipt_data = Receipt(**json.loads(receipt_data))
+        receipt_data = Receipt(**receipt_data)
+        tax_classification = client_groq.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        response_format={"type": "json_object"},
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": str(receipt_data.model_dump()) +";"+TAX_PROMPT,
+                    },
+                ],
+            }
+        ],
+        temperature=0.5,
+        max_completion_tokens=1024,
+        top_p=1,
+        stream=False,
+        stop=None,
+        )
+
+        response_content = tax_classification.choices[0].message.content
         try:
-            tax_classification = client_groq.chat.completions.create(
-            model="deepseek-r1-distill-llama-70b",
-            response_format={"type": "json_object"},
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": str(receipt_data.model_dump()) +";"+TAX_PROMPT,
-                        },
-                    ],
-                }
-            ],
-            temperature=0.5,
-            max_completion_tokens=1024,
-            top_p=1,
-            stream=False,
-            stop=None,
-            )
-
-            response_content = tax_classification.choices[0].message.content
-            try:
-                tax_classification = json.loads(response_content)
-            except json.JSONDecodeError:
-               
-                tax_classification = db.clean_bad_json_response(response_content)
-
-        except Exception as e:
-            tax_classification = {"tax_classification": "unknown", "items": []}
+            tax_classification = json.loads(response_content)
+        except json.JSONDecodeError:
+            tax_classification = db.clean_bad_json_response(response_content)
 
         receipt_data = db.enrich_receipt_tax_info(receipt_data.model_dump(), tax_classification)
 
