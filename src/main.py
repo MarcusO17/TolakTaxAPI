@@ -6,7 +6,7 @@ import os
 import uvicorn
 import base64
 import json
-import mimetypes
+import re
 from typing import Annotated
 from .classes.Reciept import Receipt 
 from . import db_helper as db
@@ -187,36 +187,44 @@ async def get_receipt_by_id(receipt_id: str):
 async def classify_tax(receipt_data:str):
     try:
         receipt_data = Receipt(**json.loads(receipt_data))
+        try:
+            tax_classification = client_groq.chat.completions.create(
+            model="deepseek-r1-distill-llama-70b",
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": str(receipt_data.model_dump()) +";"+TAX_PROMPT,
+                        },
+                    ],
+                }
+            ],
+            temperature=0.5,
+            max_completion_tokens=1024,
+            top_p=1,
+            stream=False,
+            stop=None,
+            )
 
-        # Classify the tax
-        tax_classification = client_groq.chat.completions.create(
-        model="qwen/qwen3-32b",
-        response_format={"type": "json_object"},
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": str(receipt_data.model_dump()) +";"+TAX_PROMPT,
-                    },
-                ],
-            }
-        ],
-        temperature=0.5,
-        max_completion_tokens=1024,
-        top_p=1,
-        stream=False,
-        stop=None,
-        )
+            response_content = tax_classification.choices[0].message.content
+            try:
+                tax_classification = json.loads(response_content)
+            except json.JSONDecodeError:
+               
+                tax_classification = db.clean_bad_json_response(response_content)
 
-        tax_classification = json.loads(tax_classification.choices[0].message.content)
+        except Exception as e:
+            tax_classification = {"tax_classification": "unknown", "items": []}
 
         receipt_data = db.parse_tax_into_line_items(receipt_data.model_dump(), tax_classification)
 
         return {"tax_classification": receipt_data}
     
     except Exception as e:
+        print(f"Error in classify_tax: {e}")
         raise HTTPException(status_code=500, detail=f"Error classifying tax: {str(e)}")
 
 if __name__ == "__main__":

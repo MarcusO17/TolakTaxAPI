@@ -145,15 +145,16 @@ def parse_tax_into_line_items(receipt_data: dict,tax_classification: dict = None
         tax_summary = {
             "total_tax_saved": 0.0,
             "exempt_items_count": 0,
-            "taxable_items_count": 0
+            "taxable_items_count": 0,
+            "taxable_items": [],
         }
         
 
-        for item in receipt_data["line_items"]["line_tax"]:
-            print(item)
-            if item['tax_eligible'] == True:
+        for item in receipt_data["line_items"]:
+            if item["line_tax"] is not None and item["line_tax"].get('tax_eligible') == True:
                 tax_summary["taxable_items_count"] += 1
-                tax_summary["total_tax_saved"] += item['tax_amount']
+                tax_summary["total_tax_saved"] += item["line_tax"].get('tax_amount', 0)
+                tax_summary["taxable_items"].append(item["line_tax"])
             else:
                 tax_summary["exempt_items_count"] += 1
                
@@ -168,4 +169,21 @@ def parse_tax_into_line_items(receipt_data: dict,tax_classification: dict = None
         return receipt_data
             
         
+def clean_bad_json_response(response_content):
+    """
+    Extract and clean JSON from LLM response that might include markdown formatting
+    or incomplete JSON.
+    """
+    cleaned_content = response_content.strip()
+    if cleaned_content.startswith("```json"):
+        match = re.search(r"```json\s*([\s\S]*?)\s*```", cleaned_content)
+        if match:
+            cleaned_content = match.group(1)
+
+    if not cleaned_content.startswith("{"):
+        cleaned_content = "{" + cleaned_content
+    if not cleaned_content.endswith("}"):
+        cleaned_content = cleaned_content + "}"
+
+    return json.loads(cleaned_content)
 
