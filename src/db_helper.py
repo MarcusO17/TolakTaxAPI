@@ -186,4 +186,38 @@ def clean_bad_json_response(response_content):
         cleaned_content = cleaned_content + "}"
 
     return json.loads(cleaned_content)
+# achievement functions
+def get_user_achievements(user_id: str):
+    """
+    Gets the achievement progress document for a specific user.
+    
+    Args:
+        user_id (str): The ID of the user.
+        
+    Returns:
+        The achievement data as a dictionary if it exists, otherwise None.
+    """
+    # The path to the specific document holding all achievement data
+    doc_ref = db.collection("users").document(user_id).collection("achievements").document("progress")
+    doc = doc_ref.get()
+    
+    if doc.exists:
+        return doc.to_dict()
+    else:
+        return None
 
+def save_user_achievements(user_id: str, achievements_data: dict):
+    """
+    Saves or overwrites the achievement progress document for a specific user.
+    
+    Args:
+        user_id (str): The ID of the user.
+        achievements_data (dict): A dictionary containing the achievement data to save.
+    """
+    
+    doc_ref = db.collection("users").document(user_id).collection("achievements").document("progress")
+    
+    achievements_data['lastUpdated'] = firestore.SERVER_TIMESTAMP
+    
+    # .set() will create the document if it doesn't exist, or overwrite it if it does.
+    doc_ref.set(achievements_data)
