@@ -9,6 +9,7 @@ import json
 import re
 from typing import Annotated
 from .classes.Reciept import Receipt 
+from .classes.Achievement_progress import UserAchievementsData 
 from . import db_helper as db
 import instructor
 
@@ -39,7 +40,7 @@ app = FastAPI()
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Hello World?"}
 
 
 @app.post("/upload-reciept-image/")
@@ -163,7 +164,49 @@ async def get_username(id_token: str):
         print(f"User ID: {user_id}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving username: {str(e)}")
+    
+@app.get("/get-achievements-by-user")
+async def get_achievements(id_token: str):
+    
+    user_id = db.get_uid_from_id_token(id_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid ID token")
 
+    try:
+        achievements_data = db.get_user_achievements(user_id)
+
+        if achievements_data is None:
+            raise HTTPException(status_code=404, detail="Achievement data not found for this user.")
+
+        return achievements_data
+        
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"API Error on GET /get-achievements-by-user: {str(e)}")
+        raise HTTPException(status_code=500, detail="An error occurred while retrieving achievements.")
+
+
+@app.post("/save-achievements-by-user")
+async def save_achievements(
+    achievements_data: UserAchievementsData,
+    id_token: str
+):
+
+    user_id = db.get_uid_from_id_token(id_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid ID token")
+
+    try:
+        data_to_save = achievements_data.dict(by_alias=True)
+        
+        db.save_user_achievements(user_id, data_to_save)
+
+        return {"status": "success", "message": "Achievements saved successfully"}
+        
+    except Exception as e:
+        print(f"API Error on POST /save-achievements-by-user: {str(e)}")
+        raise HTTPException(status_code=500, detail="An error occurred while saving achievements.")
 
 @app.get("/get-receipt-by-id/")
 async def get_receipt_by_id(receipt_id: str):
