@@ -10,6 +10,7 @@ import mimetypes
 from typing import Annotated
 from .classes.Reciept import Receipt 
 from .classes.Achievement_progress import UserAchievementsData 
+from .classes.Budget import UserBudgetData 
 from . import db_helper as db
 import instructor
 
@@ -196,6 +197,47 @@ async def save_achievements(
     except Exception as e:
         print(f"API Error on POST /save-achievements-by-user: {str(e)}")
         raise HTTPException(status_code=500, detail="An error occurred while saving achievements.")
+    
+
+@app.get("/get-budgets-by-user")
+async def get_budgets(id_token: str):
+    user_id = db.get_uid_from_id_token(id_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid ID token")
+
+    try:
+        budgets_data = db.get_user_budgets(user_id)
+
+        if budgets_data is None:
+            raise HTTPException(status_code=404, detail="Budget data not found for this user.")
+
+        return budgets_data
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"API Error on GET /get-budgets-by-user: {str(e)}")
+        raise HTTPException(status_code=500, detail="An error occurred while retrieving budgets.")
+
+
+@app.post("/save-budgets-by-user")
+async def save_budgets(
+    budgets_data: UserBudgetData,
+    id_token: str
+):
+    user_id = db.get_uid_from_id_token(id_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid ID token")
+
+    try:
+        data_to_save = budgets_data.dict(by_alias=True)
+        db.save_user_budgets(user_id, data_to_save)
+
+        return {"status": "success", "message": "Budgets saved successfully"}
+
+    except Exception as e:
+        print(f"API Error on POST /save-budgets-by-user: {str(e)}")
+        raise HTTPException(status_code=500, detail="An error occurred while saving budgets.")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8080)
