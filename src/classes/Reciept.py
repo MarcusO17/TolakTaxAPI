@@ -20,6 +20,12 @@ class OverallDiscount(BaseModel):
     description: str
     amount: float
 
+class TaxSummary(BaseModel):
+    total_tax_saved: float = Field(ge=float("0"))
+    exempt_items_count: int = Field(ge=0)
+    taxable_items_count: int = Field(ge=0)
+    taxable_items: List[LineTax] = Field(default_factory=list)
+
 class Receipt(BaseModel):
     merchant_name: str
     merchant_address: Optional[str] = None
@@ -35,5 +41,5 @@ class Receipt(BaseModel):
     payment_method: Optional[str] = None
     expense_category: Optional[str] = None # Data enrichment
 
-    tax_info : Optional[dict] = None
+    tax_summary: Optional[TaxSummary] = None
 
