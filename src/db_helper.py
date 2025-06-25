@@ -221,3 +221,41 @@ def save_user_achievements(user_id: str, achievements_data: dict):
     
     # .set() will create the document if it doesn't exist, or overwrite it if it does.
     doc_ref.set(achievements_data)
+
+def get_user_budgets(user_id: str):
+    """
+    Fetch the budget data for a specific user.
+    
+    Args:
+        user_id (str): The ID of the user.
+
+    Returns:
+        dict: The user's budget settings or None if not found.
+    """
+    doc_ref = db.collection("users").document(user_id).collection("settings").document("budgets")
+    doc = doc_ref.get()
+
+    if doc.exists:
+        return doc.to_dict()
+    else:
+        return None
+    
+def save_user_budgets(user_id: str, budgets_data: dict):
+    """
+    Save or update the budget settings for a specific user.
+    
+    Args:
+        user_id (str): The ID of the user.
+        budgets_data (dict): The full budget data (per category).
+    """
+    doc_ref = db.collection("users").document(user_id).collection("settings").document("budgets")
+
+    data_with_timestamp = budgets_data.copy()
+    data_with_timestamp['lastUpdated'] = firestore.SERVER_TIMESTAMP
+
+    try:
+        doc_ref.set(data_with_timestamp, merge=True)
+        print(f"Firestore save_user_budgets: Successfully saved for user {user_id}")
+    except Exception as e:
+        print(f"Firestore save_user_budgets: Error saving for user {user_id}: {str(e)}")
+        raise e

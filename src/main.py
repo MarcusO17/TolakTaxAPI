@@ -10,6 +10,7 @@ import re
 from typing import Annotated
 from .classes.Reciept import Receipt 
 from .classes.Achievement_progress import UserAchievementsData 
+from .classes.Budget import UserBudgetData 
 from . import db_helper as db
 import instructor
 
@@ -132,7 +133,7 @@ async def add_receipt(id_token: str,file: Annotated[UploadFile, File()],receipt:
         raise HTTPException(status_code=400, detail=receipt_data["error"])
     
     try:
-        doc_ref = db.add_receipt(receipt_data_enriched['tax_classification'], user_id, image_url)
+        doc_ref = db.add_receipt(receipt_data_enriched['tax_classification'], user_id, image_url['image_url'])
         return {"message": "Receipt added successfully", "receipt_id": doc_ref[1].id}
     
     
@@ -265,6 +266,58 @@ async def classify_tax(receipt_data:dict):
     except Exception as e:
         print(f"Error in classify_tax: {e}")
         raise HTTPException(status_code=500, detail=f"Error classifying tax: {str(e)}")
+
+@app.get("/get-budgets-by-user")
+async def get_budgets(id_token: str):
+    user_id = db.get_uid_from_id_token(id_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid ID token")
+
+    try:
+        budgets_data = db.get_user_budgets(user_id)
+
+        if budgets_data is None:
+            raise HTTPException(status_code=404, detail="Budget data not found for this user.")
+
+        response_payload = {
+            "budgets": budgets_data.get("budgets", {}),
+            "budgetPeriod": budgets_data.get("budget_period")
+        }
+
+        return response_payload
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"API Error on GET /get-budgets-by-user: {str(e)}")
+        raise HTTPException(status_code=500, detail="An error occurred while retrieving budgets.")
+
+
+@app.post("/save-budgets-by-user")
+async def save_budgets(
+    budgets_data: UserBudgetData,
+    id_token: str
+):
+    user_id = db.get_uid_from_id_token(id_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid ID token")
+
+    try:
+        data_for_db = {"budgets": budgets_data.budgets}
+        if budgets_data.budget_period is not None:
+            data_for_db["budget_period"] = budgets_data.budget_period
+
+        
+        print(data_for_db)
+
+        db.save_user_budgets(user_id, data_for_db)
+
+        return {"status": "success", "message": "Budgets saved successfully"}
+
+    except Exception as e:
+        print(f"API Error on POST /save-budgets-by-user: {str(e)}")
+        raise HTTPException(status_code=500, detail="An error occurred while saving budgets.")
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8080)
