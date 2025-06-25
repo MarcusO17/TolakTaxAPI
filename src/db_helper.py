@@ -250,4 +250,12 @@ def save_user_budgets(user_id: str, budgets_data: dict):
     """
     doc_ref = db.collection("users").document(user_id).collection("settings").document("budgets")
 
-    budgets_data['lastUpdated'] = firestore.SERVER_TIMESTAMP
+    data_with_timestamp = budgets_data.copy()
+    data_with_timestamp['lastUpdated'] = firestore.SERVER_TIMESTAMP
+
+    try:
+        doc_ref.set(data_with_timestamp, merge=True)
+        print(f"Firestore save_user_budgets: Successfully saved for user {user_id}")
+    except Exception as e:
+        print(f"Firestore save_user_budgets: Error saving for user {user_id}: {str(e)}")
+        raise e

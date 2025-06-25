@@ -133,7 +133,7 @@ async def add_receipt(id_token: str,file: Annotated[UploadFile, File()],receipt:
         raise HTTPException(status_code=400, detail=receipt_data["error"])
     
     try:
-        doc_ref = db.add_receipt(receipt_data_enriched['tax_classification'], user_id, image_url)
+        doc_ref = db.add_receipt(receipt_data_enriched['tax_classification'], user_id, image_url['image_url'])
         return {"message": "Receipt added successfully", "receipt_id": doc_ref[1].id}
     
     
@@ -279,7 +279,12 @@ async def get_budgets(id_token: str):
         if budgets_data is None:
             raise HTTPException(status_code=404, detail="Budget data not found for this user.")
 
-        return budgets_data
+        response_payload = {
+            "budgets": budgets_data.get("budgets", {}),
+            "budgetPeriod": budgets_data.get("budget_period")
+        }
+
+        return response_payload
 
     except HTTPException as e:
         raise e
@@ -298,8 +303,14 @@ async def save_budgets(
         raise HTTPException(status_code=401, detail="Invalid ID token")
 
     try:
-        data_to_save = budgets_data.dict(by_alias=True)
-        db.save_user_budgets(user_id, data_to_save)
+        data_for_db = {"budgets": budgets_data.budgets}
+        if budgets_data.budget_period is not None:
+            data_for_db["budget_period"] = budgets_data.budget_period
+
+        
+        print(data_for_db)
+
+        db.save_user_budgets(user_id, data_for_db)
 
         return {"status": "success", "message": "Budgets saved successfully"}
 
