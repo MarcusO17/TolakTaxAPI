@@ -1,7 +1,7 @@
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
 from dotenv import load_dotenv
-from .classes.Reciept import LineTax
+from .classes.Reciept import LineTax, TaxSummary
 import json
 import base64
 import re
@@ -159,7 +159,7 @@ def enrich_receipt_tax_info(receipt_data: dict,tax_classification: dict = None):
                 tax_summary["exempt_items_count"] += 1
                
         # Add tax summary to receipt data
-        receipt_data["tax_info"] = tax_summary
+        receipt_data["tax_summary"] = TaxSummary(**tax_summary).model_dump()
 
         return receipt_data
 
