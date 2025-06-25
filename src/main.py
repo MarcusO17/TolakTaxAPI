@@ -6,7 +6,7 @@ import os
 import uvicorn
 import base64
 import json
-import mimetypes
+import re
 from typing import Annotated
 from .classes.Reciept import Receipt 
 from .classes.Achievement_progress import UserAchievementsData 
@@ -23,8 +23,15 @@ prompt_path = os.path.join(os.path.dirname(__file__), "receipt_prompt.txt")
 with open(prompt_path, "r") as f:
     RECEIPT_PROMPT = f.read()
 
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-client = instructor.from_groq(client,mode=instructor.Mode.JSON)
+# Load the tax prompt from file
+prompt_path = os.path.join(os.path.dirname(__file__), "tax_prompt.txt")
+with open(prompt_path, "r") as f:
+    TAX_PROMPT = f.read()
+
+
+
+client_groq = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+client = instructor.from_groq(client_groq,mode=instructor.Mode.JSON)
 
 app = FastAPI()
 
@@ -119,12 +126,16 @@ async def add_receipt(id_token: str,file: Annotated[UploadFile, File()],receipt:
     receipt_data = Receipt(**json.loads(receipt)).model_dump()
     print(f"Receipt Data: {receipt_data}")
 
+    #enrich with tax info
+    receipt_data_enriched = await classify_tax(receipt_data)
+
     if "error" in receipt_data:
         raise HTTPException(status_code=400, detail=receipt_data["error"])
     
     try:
-        doc_ref = db.add_receipt(receipt_data, user_id, image_url)
+        doc_ref = db.add_receipt(receipt_data_enriched['tax_classification'], user_id, image_url)
         return {"message": "Receipt added successfully", "receipt_id": doc_ref[1].id}
+    
     
     except Exception as e:
         print(f"Original error in add_receipt: {type(e).__name__} - {e}") # Print the original error
@@ -197,7 +208,64 @@ async def save_achievements(
     except Exception as e:
         print(f"API Error on POST /save-achievements-by-user: {str(e)}")
         raise HTTPException(status_code=500, detail="An error occurred while saving achievements.")
+
+@app.get("/get-receipt-by-id/")
+async def get_receipt_by_id(receipt_id: str):
+    try:
+        print(f"Receipt ID: {receipt_id}")
+        # Retrieve the receipt by its ID
+        receipt = db.get_receipt_by_id(receipt_id)
+        print(f"Retrieved Receipt: {receipt}")
+        if not receipt:
+            raise HTTPException(status_code=404, detail="Receipt not found")
+        
+        return {"receipt": Receipt(**receipt.to_dict()).model_dump()}
     
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving receipt: {str(e)}")
+
+
+
+
+# Tax 
+@app.get("/classify-tax/")
+async def classify_tax(receipt_data:dict):
+    try:
+        receipt_data = Receipt(**receipt_data)
+        tax_classification = client_groq.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        response_format={"type": "json_object"},
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": str(receipt_data.model_dump()) +";"+TAX_PROMPT,
+                    },
+                ],
+            }
+        ],
+        temperature=0.5,
+        max_completion_tokens=1024,
+        top_p=1,
+        stream=False,
+        stop=None,
+        )
+
+        response_content = tax_classification.choices[0].message.content
+        try:
+            tax_classification = json.loads(response_content)
+        except json.JSONDecodeError:
+            tax_classification = db.clean_bad_json_response(response_content)
+
+        receipt_data = db.enrich_receipt_tax_info(receipt_data.model_dump(), tax_classification)
+
+        return {"tax_classification": receipt_data}
+    
+    except Exception as e:
+        print(f"Error in classify_tax: {e}")
+        raise HTTPException(status_code=500, detail=f"Error classifying tax: {str(e)}")
 
 @app.get("/get-budgets-by-user")
 async def get_budgets(id_token: str):
@@ -238,6 +306,7 @@ async def save_budgets(
     except Exception as e:
         print(f"API Error on POST /save-budgets-by-user: {str(e)}")
         raise HTTPException(status_code=500, detail="An error occurred while saving budgets.")
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8080)
