@@ -101,7 +101,13 @@ def get_user_receipts(user_id: str):
         List of receipt documents
     """
     receipts_ref = db.collection("receipts").where("user_id", "==", user_id).stream()
-    return [receipt.to_dict() for receipt in receipts_ref]
+    receipts_list = []
+    for receipt in receipts_ref:
+        receipt_data = receipt.to_dict()
+        receipt_data['receipt_id'] = receipt.id 
+        receipts_list.append(receipt_data)
+        
+    return receipts_list
 
 
 def get_user(user_id: str):
@@ -258,4 +264,21 @@ def save_user_budgets(user_id: str, budgets_data: dict):
         print(f"Firestore save_user_budgets: Successfully saved for user {user_id}")
     except Exception as e:
         print(f"Firestore save_user_budgets: Error saving for user {user_id}: {str(e)}")
+        raise e
+    
+def delete_receipt(receipt_id: str):
+    """
+    Deletes a receipt from Firestore by its ID.
+    
+    Args:
+        receipt_id (str): The ID of the receipt document to delete.
+    
+    Returns:
+        None
+    """
+    try:
+        db.collection("receipts").document(receipt_id).delete()
+        print(f"Successfully deleted receipt with ID: {receipt_id}")
+    except Exception as e:
+        print(f"Error deleting receipt {receipt_id}: {e}")
         raise e

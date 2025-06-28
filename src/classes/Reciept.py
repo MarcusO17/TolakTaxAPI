@@ -21,6 +21,7 @@ class OverallDiscount(BaseModel):
     amount: float
 
 class Receipt(BaseModel):
+    receipt_id: Optional[str] = None
     merchant_name: str
     merchant_address: Optional[str] = None
     transaction_datetime:  str # ISO 8601 format 

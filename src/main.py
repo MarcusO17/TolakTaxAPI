@@ -104,7 +104,8 @@ async def read_receipt_image(file: Annotated[UploadFile, File()]):
         stream=False,
         stop=None,
     )
-
+        
+        print(receipt.model_dump())
         return receipt.model_dump()
     
     except Exception as e:
@@ -318,6 +319,51 @@ async def save_budgets(
         print(f"API Error on POST /save-budgets-by-user: {str(e)}")
         raise HTTPException(status_code=500, detail="An error occurred while saving budgets.")
 
+
+@app.delete("/delete-receipt-by-id")
+async def delete_receipt(receipt_id: str, id_token: str):
+    """
+    Deletes a specific receipt after verifying ownership via ID token.
+
+    - **receipt_id**: The unique ID of the receipt to delete.
+    - **id_token**: The Firebase Authentication ID token of the user.
+    """
+    user_id = db.get_uid_from_id_token(id_token)
+    if not user_id:
+        raise HTTPException(
+            status_code=401, 
+            detail="Invalid ID token"
+        )
+
+    try:
+        receipt_doc = db.get_receipt_by_id(receipt_id)
+        if not receipt_doc.exists:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Receipt with id {receipt_id} not found",
+            )
+        
+        receipt_data = receipt_doc.to_dict()
+
+        # Authorize the user. Check if the receipt's user_id matches the token's user_id.
+        if receipt_data.get("user_id") != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to delete this receipt",
+            )
+        
+        db.delete_receipt(receipt_id)
+        
+        return {"message": "Receipt deleted successfully", "receipt_id": receipt_id}
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Error during receipt deletion process: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while deleting the receipt: {str(e)}",
+        )
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8080)
