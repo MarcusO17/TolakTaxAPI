@@ -27,6 +27,7 @@ class TaxSummary(BaseModel):
     taxable_items: List[LineTax] = Field(default_factory=list)
 
 class Receipt(BaseModel):
+    receipt_id: Optional[str] = None
     merchant_name: str
     merchant_address: Optional[str] = None
     transaction_datetime:  str # ISO 8601 format 
