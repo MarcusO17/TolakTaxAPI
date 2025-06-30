@@ -336,28 +336,10 @@ async def delete_receipt(receipt_id: str, id_token: str):
         )
 
     try:
-        receipt_doc = db.get_receipt_by_id(receipt_id)
-        if not receipt_doc.exists:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Receipt with id {receipt_id} not found",
-            )
-        
-        receipt_data = receipt_doc.to_dict()
-
-        # Authorize the user. Check if the receipt's user_id matches the token's user_id.
-        if receipt_data.get("user_id") != user_id:
-            raise HTTPException(
-                status_code=403,
-                detail="You do not have permission to delete this receipt",
-            )
-        
         db.delete_receipt(receipt_id)
         
         return {"message": "Receipt deleted successfully", "receipt_id": receipt_id}
 
-    except HTTPException as e:
-        raise e
     except Exception as e:
         print(f"Error during receipt deletion process: {str(e)}")
         raise HTTPException(
