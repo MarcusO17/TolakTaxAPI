@@ -48,12 +48,9 @@ def upload_to_bucket(blob_name, path_to_file, bucket_name):
 
 def get_uid_from_id_token(id_token):
     try:
-        decoded_token = auth.verify_id_token(id_token)
+        decoded_token = auth.verify_id_token(id_token,clock_skew_seconds=10)
         uid = decoded_token['uid']
         return uid
-    except auth.InvalidIdTokenError:
-        print("Invalid ID token")
-        return None
     except Exception as e:
         print(f"Error verifying token: {e}")
         return None
